@@ -15,21 +15,43 @@ client.on('messageCreate', async msg => {
 
   if (msg.content.startsWith("$nick")) {
     const regex = /<@(\d+)>(.*)/;
-
     const match = msg.content.match(regex);
-
+    
     if (match) {
       const userNumber = match[1];
       const intendedUserNick = match[2].trim();
-      if (userNumber != msg.author.id) {
-        work(userNumber, msg, intendedUserNick);
+  
+      const guild = await client.guilds.fetch(msg.guildId);
+      const user = await guild.members.cache.find(member => member.id === userNumber);
+
+      if (userNumber == msg.author.id) {
+        try {
+          msg.reply("You can't change your own nickname, silly")
+        }
+        catch (e) {
+          console.log(e)
+        }
+        
+      }
+      else if (user.user.bot) {
+        try {
+          msg.reply("You can't change a bots nickname")
+        }
+        catch (e) {
+          console.log(e)
+        }
       }
       else {
-        msg.reply("You can't change your own nickname, silly")
+        work(user, msg, intendedUserNick);
       }
       
     } else {
-      msg.reply("That didn't work :(. The syntax is $nick (user) (new nickname)");
+      try {
+        msg.reply("That didn't work :(. The syntax is $nick (user) (new nickname)");
+      }
+      catch (e) {
+        console.log(e)
+      }
     }
   }
 
@@ -53,19 +75,21 @@ open({
   console.log("LOGGED IN")
 });
 
-async function work(userNumber, msg, textAfterNumber) {
-  const guild = await client.guilds.fetch(msg.guildId);
- 
-      const user = await guild.members.cache.find(member => member.id === userNumber);
+async function work(user, msg, textAfterNumber) {
       try {
         await namesdb.run('DELETE FROM names WHERE GuildID = ? AND UserID = ?', [msg.guildId, user.id])
         await namesdb.run('INSERT INTO names (GuildID, UserID, Nickname) VALUES (?,?,?)', [msg.guildId, user.id, textAfterNumber])
         await user.setNickname(textAfterNumber, "Funny");
         
-        msg.reply("<@" + userNumber + "> your nickname has been set :)");
+        msg.reply("<@" + user.id + "> your nickname has been set :)");
       }
       catch (e) {
-        msg.reply("<@" + userNumber + "> change ur nickname to ```" + textAfterNumber + "``` NOW!!! \n (SERVER ADMIN MAKE SURE BOT PERM ROLE IS ABOVE ALL OTHERS)");
+        try {
+          msg.reply("<@" + user.id + "> change ur nickname to ```" + textAfterNumber + "``` NOW!!! \n (SERVER ADMIN MAKE SURE BOT PERM ROLE IS ABOVE ALL OTHERS)");
+        }
+        catch(e) {
+          console.log(e)
+        }
       }
 }
 
@@ -81,8 +105,8 @@ async function getIntendedName(msg) {
     
     const nuser = await guild.members.cache.find(member => member.id === user);
     
-    if (nuser.nickname == null || nuser.nickname.toLowerCase().trim() != name.toLowerCase().trim()) {
-      work(user, msg, name)
+    if (!nuser.user.bot && (nuser.nickname == null || nuser.nickname.toLowerCase().trim() != name.toLowerCase().trim())) {
+      work(nuser, msg, name)
     }
   
   }
