@@ -79,9 +79,10 @@ async function work(user, msg, textAfterNumber) {
       try {
         await namesdb.run('DELETE FROM names WHERE GuildID = ? AND UserID = ?', [msg.guildId, user.id])
         await namesdb.run('INSERT INTO names (GuildID, UserID, Nickname) VALUES (?,?,?)', [msg.guildId, user.id, textAfterNumber])
+        let oldName = user.nickname;
         await user.setNickname(textAfterNumber, "Funny");
         
-        msg.reply("<@" + user.id + "> your nickname has been set :)");
+        msg.reply("<@" + user.id + "> your nickname has been changed from " + oldName + " :)");
       }
       catch (e) {
         try {
